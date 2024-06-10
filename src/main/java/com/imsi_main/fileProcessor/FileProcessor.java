@@ -18,15 +18,17 @@ public class FileProcessor {
     private FileValidator fileValidator;
     private Database database;
 
-    public void processFiles(Properties properties) {
-        fileValidator = new FileValidator(properties);
-        database = new Database(properties.getProperty("db.url"), properties.getProperty("db.user"), properties.getProperty("db.password"));
+    public void processFiles(Properties processProperties, Properties dbProperties) {
+        fileValidator = new FileValidator(processProperties);
+        database = new Database(dbProperties.getProperty("spring.datasource.url"),
+                dbProperties.getProperty("spring.datasource.username"),
+                dbProperties.getProperty("spring.datasource.password"));
         logger.info("Program Started");
 
         try {
             while (true) {
-                File addFile = getFirstFile(properties.getProperty("addFilePath"), properties.getProperty("addFileNamePrefix"));
-                File delFile = getFirstFile(properties.getProperty("delFilePath"), properties.getProperty("delFileNamePrefix"));
+                File addFile = getFirstFile(processProperties.getProperty("addFilePath"), processProperties.getProperty("addFileNamePrefix"));
+                File delFile = getFirstFile(processProperties.getProperty("delFilePath"), processProperties.getProperty("delFileNamePrefix"));
 
                 if (addFile == null || delFile == null) {
                     logger.info("No more files to process.");
@@ -35,21 +37,21 @@ public class FileProcessor {
 
                 if (!validateDate(addFile, delFile)) {
                     logger.info("Date validation failed.");
-                    updateAuditTrail(properties, "501", "FAIL", "Date validation failed.");
-                    moveFileToCorruptFolder(addFile.getPath(), properties.getProperty("fileCorruptPath"));
-                    moveFileToCorruptFolder(delFile.getPath(), properties.getProperty("fileCorruptPath"));
+                    updateAuditTrail(processProperties, "501", "FAIL", "Date validation failed.");
+                    moveFileToCorruptFolder(addFile.getPath(), processProperties.getProperty("fileCorruptPath"));
+                    moveFileToCorruptFolder(delFile.getPath(), processProperties.getProperty("fileCorruptPath"));
                     continue;
                 }
 
                 try {
                     logger.info("Processing SIM Change and HLR Deactivation");
-                    processSimChangeAndHlrDeactivation(addFile, delFile, properties);
+                    processSimChangeAndHlrDeactivation(addFile, delFile, processProperties);
                 } catch (IOException e) {
                     logger.severe("Failed to process files: " + e.getMessage());
                 }
 
-                moveFileToProcessedFolder(addFile.getPath(), properties.getProperty("fileProcessedPath"));
-                moveFileToProcessedFolder(delFile.getPath(), properties.getProperty("fileProcessedPath"));
+                moveFileToProcessedFolder(addFile.getPath(), processProperties.getProperty("fileProcessedPath"));
+                moveFileToProcessedFolder(delFile.getPath(), processProperties.getProperty("fileProcessedPath"));
             }
         } finally {
             database.close();
@@ -57,6 +59,7 @@ public class FileProcessor {
 
         logger.info("Program Finished");
     }
+
 
     private File getFirstFile(String directoryPath, String filePrefix) {
         logger.info("Getting the first file");
