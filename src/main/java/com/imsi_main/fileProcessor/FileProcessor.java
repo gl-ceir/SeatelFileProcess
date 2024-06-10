@@ -110,10 +110,19 @@ public class FileProcessor {
         List<String[]> addFileLines = CSVReader.readCSV(addFile);
         List<String[]> delFileLines = CSVReader.readCSV(delFile);
 
-        try (BufferedWriter simChangeWriter = new BufferedWriter(new FileWriter(properties.getProperty("simchangeFilePath")));
-             BufferedWriter hlrDeacWriter = new BufferedWriter(new FileWriter(properties.getProperty("hlrDeactivationFilePath")));
-             BufferedWriter addHlrWriter = new BufferedWriter(new FileWriter(properties.getProperty("addFilePathForHlrAdd")));
-             BufferedWriter delHlrWriter = new BufferedWriter(new FileWriter(properties.getProperty("addFilePathForHlrDel")));
+        String timestamp = new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
+        String date = new SimpleDateFormat("yyyyMMdd").format(new Date());
+        String operator = properties.getProperty("operator");
+
+        String simChangeFilePath = properties.getProperty("simchangeFileDir") + timestamp + "_" + properties.getProperty("simchangeFileName");
+        String hlrDeactivationFilePath = properties.getProperty("hlrDeactivationFileDir") + timestamp + "_" + properties.getProperty("hlrDeactivationFileName");
+        String addFilePathForHlrDel = properties.getProperty("addFilePathForHlrDelDir") + properties.getProperty("addFilePathForHlrDelName")+"_"+ operator + "_" +date+".csv";
+        String addFilePathForHlrAdd = properties.getProperty("addFilePathForHlrAddDir") + properties.getProperty("addFilePathForHlrAddName")+"_"+ operator + "_" +date+".csv";
+
+        try (BufferedWriter simChangeWriter = new BufferedWriter(new FileWriter(simChangeFilePath));
+             BufferedWriter hlrDeacWriter = new BufferedWriter(new FileWriter(hlrDeactivationFilePath));
+             BufferedWriter addHlrWriter = new BufferedWriter(new FileWriter(addFilePathForHlrAdd));
+             BufferedWriter delHlrWriter = new BufferedWriter(new FileWriter(addFilePathForHlrDel));
              BufferedWriter errorWriter = new BufferedWriter(new FileWriter(properties.getProperty("fileCorruptPath") + "/error.csv"))) {
 
             // Write headers
@@ -143,7 +152,7 @@ public class FileProcessor {
                     String msisdn = line[1];
                     String oldImsi = getImsi(msisdn, addFileLines); // Method to retrieve old IMSI from delFile
                     String newImsi = getNewImsi(msisdn, addFileLines);
-                    String delDate = line[8]; //  Delete Date Time
+                    String delDate = line[8]; // Delete Date Time
 
                     if (newImsi != null && oldImsi != null) {
                         logger.info("Sim writer");
@@ -159,7 +168,6 @@ public class FileProcessor {
                         delHlrWriter.write(String.join(",", newImsi, msisdn, delDate));
                         delHlrWriter.newLine();
                     }
-
                 }
             }
         } catch (IOException e) {
